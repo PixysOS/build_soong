@@ -19,6 +19,8 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+ 
+ 	"pixys/soong/android"
 
 	"github.com/google/blueprint/proptools"
 )
@@ -114,6 +116,10 @@ type variableProperties struct {
 			Static_libs  []string
 			Srcs         []string
 		}
+
+		// include Pixys variables
+		 *android.Product_variables
+   
 	} `android:"arch_variant"`
 }
 
@@ -230,6 +236,9 @@ type productVariables struct {
 	PgoAdditionalProfileDirs []string `json:",omitempty"`
 
 	VendorVars map[string]map[string]string `json:",omitempty"`
+
+	// include Pixys variables
+	     *android.ProductVariables
 }
 
 func boolPtr(v bool) *bool {
