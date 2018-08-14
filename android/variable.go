@@ -118,7 +118,7 @@ type variableProperties struct {
 		}
 
 		// include Pixys variables
-		 *android.Product_variables
+		Pixys android.Product_variables
    
 	} `android:"arch_variant"`
 }
@@ -238,7 +238,7 @@ type productVariables struct {
 	VendorVars map[string]map[string]string `json:",omitempty"`
 
 	// include Pixys variables
-	     *android.ProductVariables
+	    Pixys android.ProductVariables
 }
 
 func boolPtr(v bool) *bool {
