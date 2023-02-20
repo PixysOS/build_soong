@@ -73,7 +73,7 @@ var (
 		"-Werror=int-conversion",
 
 		// Enable the new pass manager.
-		"-fexperimental-new-pass-manager",
+		//"-fexperimental-new-pass-manager",
 
 		// Disable overly aggressive warning for macros defined with a leading underscore
 		// This happens in AndroidConfig.h, which is included nearly everywhere.
@@ -187,6 +187,10 @@ var (
 	}
 
 	noOverrideGlobalCflags = []string{
+		// Workaround for boot loop caused by stack protector.
+		// http://b/267839238
+		"-mllvm -disable-check-noreturn-call",
+
 		"-Werror=bool-operation",
 		"-Werror=implicit-int-float-conversion",
 		"-Werror=int-in-bool-context",
@@ -249,6 +253,9 @@ var (
 		"-Wno-error=single-bit-bitfield-constant-conversion",
 		"-Wno-error=unused-private-field",
 		"-Wno-unused-command-line-argument",
+		"-Wno-error=thread-safety-analysis",
+		"-Wno-error=unguarded-availability",
+		"-Wno-error=logical-op-parentheses",
 	}
 
 	noOverrideExternalGlobalCflags = []string{
@@ -257,6 +264,7 @@ var (
 		"-Wno-unused-but-set-parameter",
 		// http://b/215753485
 		"-Wno-bitwise-instead-of-logical",
+		"-Wno-gnu-offsetof-extensions",
 	}
 
 	// Extra cflags for external third-party projects to disable warnings that
@@ -306,8 +314,8 @@ var (
 
 	// prebuilts/clang default settings.
 	ClangDefaultBase         = "prebuilts/clang/host"
-	ClangDefaultVersion      = "clang-r475365b"
-	ClangDefaultShortVersion = "16.0.2"
+	ClangDefaultVersion      = "clang-r487747"
+	ClangDefaultShortVersion = "17"
 
 	// Directories with warnings from Android.bp files.
 	WarningAllowedProjects = []string{
