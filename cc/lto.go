@@ -91,11 +91,14 @@ func (lto *lto) flags(ctx BaseModuleContext, flags Flags) Flags {
 	if lto.LTO(ctx) {
 		var ltoCFlag string
 		var ltoLdFlag string
-		// HACK: use full lto opposed to thin lto.
-		// We do not care about compile times for runtime improvement.
-		ltoCFlag = "-flto"
+		if lto.FullLTO() {
+			ltoCFlag = "-flto"
+		} else {
+			ltoCFlag = "-flto=thin -fsplit-lto-unit"
+		}
 
 		flags.Local.CFlags = append(flags.Local.CFlags, ltoCFlag)
+		flags.Local.AsFlags = append(flags.Local.AsFlags, ltoCFlag)
 		flags.Local.LdFlags = append(flags.Local.LdFlags, ltoCFlag)
 		flags.Local.LdFlags = append(flags.Local.LdFlags, ltoLdFlag)
 
@@ -115,17 +118,28 @@ func (lto *lto) flags(ctx BaseModuleContext, flags Flags) Flags {
 			policy := "cache_size=10%:cache_size_bytes=10g"
 			flags.Local.LdFlags = append(flags.Local.LdFlags, cachePolicyFormat+policy)
 		}
-
-		if !ctx.isPgoCompile() && !ctx.isAfdoCompile() {
-			flags.Local.LdFlags = append(flags.Local.LdFlags,
-				"-Wl,-mllvm,-inline-threshold=600")
-			flags.Local.LdFlags = append(flags.Local.LdFlags,
-				"-Wl,-mllvm,-inlinehint-threshold=750")
-			flags.Local.LdFlags = append(flags.Local.LdFlags,
-				"-Wl,-mllvm,-unroll-threshold=600")
-			flags.Local.LdFlags = append(flags.Local.LdFlags,
+		//LTO
+		flags.Local.LdFlags = append(flags.Local.LdFlags,
+			"-Wl,-mllvm,-inline-threshold=600")
+		flags.Local.LdFlags = append(flags.Local.LdFlags,
+			"-Wl,-mllvm,-inlinehint-threshold=750")
+		flags.Local.LdFlags = append(flags.Local.LdFlags,
+			"-Wl,-mllvm,-unroll-threshold=600")
+		flags.Local.LdFlags = append(flags.Local.LdFlags,
 				"-Wl,--lto-O3")
-		}
+		//Polly + Polly DCE
+		flags.Local.LdFlags = append(flags.Local.LdFlags,
+				"-Wl,-mllvm,-polly")
+		flags.Local.LdFlags = append(flags.Local.LdFlags,
+				"-Wl,-mllvm,-polly-ast-use-context")
+		flags.Local.LdFlags = append(flags.Local.LdFlags,
+				"-Wl,-mllvm,-polly-invariant-load-hoisting")
+		flags.Local.LdFlags = append(flags.Local.LdFlags,
+				"-Wl,-mllvm,-polly-run-inliner")
+		flags.Local.LdFlags = append(flags.Local.LdFlags,
+				"-Wl,-mllvm,-polly-vectorizer=stripmine")
+		flags.Local.LdFlags = append(flags.Local.LdFlags,
+				"-Wl,-mllvm,-polly-run-dce")
 	}
 	return flags
 }
@@ -135,9 +149,16 @@ func (lto *lto) LTO(ctx BaseModuleContext) bool {
 }
 
 func (lto *lto) DefaultThinLTO(ctx BaseModuleContext) bool {
+	// LP32 has many subtle issues and less test coverage.
+	lib32 := ctx.Arch().ArchType.Multilib == "lib32"
+	// CFI enables full LTO.
+	cfi := ctx.isCfi()
+	// Performance and binary size are less important for host binaries.
 	host := ctx.Host()
-	vndk := ctx.isVndk() // b/169217596
-	return GlobalThinLTO(ctx) && !lto.Never() && !host && !vndk
+	// FIXME: ThinLTO for VNDK produces different output.
+	// b/169217596
+	vndk := ctx.isVndk()
+	return GlobalThinLTO(ctx) && !lto.Never() && !lib32 && !cfi && !host && !vndk
 }
 
 func (lto *lto) FullLTO() bool {
